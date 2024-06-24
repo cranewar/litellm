@@ -8,7 +8,9 @@ ARG LITELLM_RUNTIME_IMAGE=python:3.11.8-slim
 FROM $LITELLM_BUILD_IMAGE as builder
 
 # Creat
+USER 15006
 
+USER root
 # Set the working directory to /app
 WORKDIR /app
 
@@ -50,7 +52,7 @@ RUN pip install PyJWT --no-cache-dir
 RUN chmod +x build_admin_ui.sh && ./build_admin_ui.sh
 
 # Give all permissions to the user (run as root)
-RUN chown -R litellm:litellm /app
+RUN chown -R 15006:15006 /app
 
 # Switch to the user
 USER 15006
@@ -85,7 +87,7 @@ RUN pip install *.whl /wheels/* --no-index --find-links=/wheels/ && rm -f *.whl 
 USER 15006
 
 # Ensure user has permissions to run litellm
-RUN chmod +x litellm
+RUN chmod +x 15006
 
 EXPOSE 4000/tcp
 
