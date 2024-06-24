@@ -7,8 +7,7 @@ ARG LITELLM_RUNTIME_IMAGE=python:3.11.8-slim
 # Builder stage
 FROM $LITELLM_BUILD_IMAGE as builder
 
-# Create a non-root user for running the application
-RUN adduser --disabled-password --gecos "" 15006
+# Creat
 
 # Set the working directory to /app
 WORKDIR /app
