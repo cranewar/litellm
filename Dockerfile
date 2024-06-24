@@ -8,7 +8,7 @@ ARG LITELLM_RUNTIME_IMAGE=python:3.11.8-slim
 FROM $LITELLM_BUILD_IMAGE as builder
 
 # Create a non-root user for running the application
-RUN adduser --disabled-password --gecos "" --uid 10001 litellm
+RUN adduser --disabled-password --gecos "" --uid 10001 15006
 
 # Set the working directory to /app
 WORKDIR /app
@@ -54,7 +54,7 @@ RUN chmod +x build_admin_ui.sh && ./build_admin_ui.sh
 RUN chown -R litellm:litellm /app
 
 # Switch to the user
-USER litellm
+USER 15006
 
 # Generate prisma client
 RUN prisma generate
@@ -83,7 +83,7 @@ COPY --from=builder /wheels/ /wheels/
 RUN pip install *.whl /wheels/* --no-index --find-links=/wheels/ && rm -f *.whl && rm -rf /wheels
 
 # Switch to the user
-USER litellm
+USER 15006
 
 # Ensure user has permissions to run litellm
 RUN chmod +x litellm
