@@ -3,8 +3,12 @@ ARG LITELLM_BUILD_IMAGE=python:3.11.8-slim
 
 # Runtime image
 ARG LITELLM_RUNTIME_IMAGE=python:3.11.8-slim
+
 # Builder stage
 FROM $LITELLM_BUILD_IMAGE as builder
+
+# Create a non-root user for running the application
+RUN adduser --disabled-password --gecos "" litellm
 
 # Set the working directory to /app
 WORKDIR /app
@@ -20,36 +24,53 @@ RUN pip install --upgrade pip && \
 # Copy the current directory contents into the container at /app
 COPY . .
 
-# Build Admin UI
+# Build Admin UI (run as root)
 RUN chmod +x build_admin_ui.sh && ./build_admin_ui.sh
 
-# Build the package
+# Build the package (run as root)
 RUN rm -rf dist/* && python -m build
 
 # There should be only one wheel file now, assume the build only creates one
 RUN ls -1 dist/*.whl | head -1
 
-# Install the package
+# Install the package (run as root)
 RUN pip install dist/*.whl
 
-# install dependencies as wheels
+# install dependencies as wheels (run as root)
 RUN pip wheel --no-cache-dir --wheel-dir=/wheels/ -r requirements.txt
 
-# install semantic-cache [Experimental]- we need this here and not in requirements.txt because redisvl pins to pydantic 1.0 
+# install semantic-cache [Experimental]- we need this here and not in requirements.txt because redisvl pins to pydantic 1.0 (run as root)
 RUN pip install redisvl==0.0.7 --no-deps
 
-# ensure pyjwt is used, not jwt
+# ensure pyjwt is used, not jwt (run as root)
 RUN pip uninstall jwt -y
 RUN pip uninstall PyJWT -y
 RUN pip install PyJWT --no-cache-dir
 
-# Build Admin UI
+# Build Admin UI (run as root)
 RUN chmod +x build_admin_ui.sh && ./build_admin_ui.sh
+
+# Give all permissions to the user (run as root)
+RUN chown -R litellm:litellm /app
+
+# Switch to the user
+USER litellm
+
+# Generate prisma client
+RUN prisma generate
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
 
 # Runtime stage
 FROM $LITELLM_RUNTIME_IMAGE as runtime
 
+# Create the user (already done in the builder stage)
+# RUN adduser --disabled-password --gecos "" litellm
+
+# Set the working directory to /app
 WORKDIR /app
+
 # Copy the current directory contents into the container at /app
 COPY . .
 RUN ls -la /app
@@ -61,9 +82,11 @@ COPY --from=builder /wheels/ /wheels/
 # Install the built wheel using pip; again using a wildcard if it's the only file
 RUN pip install *.whl /wheels/* --no-index --find-links=/wheels/ && rm -f *.whl && rm -rf /wheels
 
-# Generate prisma client
-RUN prisma generate
-RUN chmod +x entrypoint.sh
+# Switch to the user
+USER litellm
+
+# Ensure user has permissions to run litellm
+RUN chmod +x litellm
 
 EXPOSE 4000/tcp
 
