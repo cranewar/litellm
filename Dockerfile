@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install build dependencies
 RUN apt-get clean && apt-get update && \
-    apt-get install -y gcc python3-dev && \
+    apt-get install -y gcc python3-dev nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip && \
@@ -53,7 +53,7 @@ RUN chmod +x build_admin_ui.sh && ./build_admin_ui.sh
 
 # Give all permissions to the user (run as root)
 RUN chown -R 15006:15006 /app
-
+RUN npm install -g prisma
 # Switch to the user
 USER 15006
 
